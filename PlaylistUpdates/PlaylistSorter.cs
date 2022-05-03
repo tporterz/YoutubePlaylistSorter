@@ -91,41 +91,30 @@ namespace PlaylistSorter
             // Sort video names (automatically alphabetical order)
             requestedPlaylistVideoNames.Sort();
 
-            int i = 0; // Index to handle which video of the now sorted videos we are at
-
-            // While we have videos to re-index
-            while (i < requestedPlaylistVideoNames.Count - 1)
+            // For each video in the playlist
+            foreach (var video in requestedPlaylistResponse.Items)
             {
-                // Go through all of the videos in the playlist we're altering and find the video we want to move
-                foreach (var video in requestedPlaylistResponse.Items)
-                {
-                    // If we find the video
-                    if (video.Snippet.Title == requestedPlaylistVideoNames[i])
-                    {
-                        // Build a new video item off of the video, and give it the necessary properties including the
-                        // new position inside of the playlist
-                        PlaylistItem videoItem = video;
-                        PlaylistItemSnippet snippet = new PlaylistItemSnippet();
-                        snippet.PlaylistId = requestedPlaylist.Id;
-                        snippet.Position = i;
-                        ResourceId resourceId = new ResourceId();
-                        resourceId.Kind = "youtube#video";
-                        Console.WriteLine(resourceId.Kind);
-                        resourceId.VideoId = videoItem.Snippet.ResourceId.VideoId;
-                        snippet.ResourceId = resourceId;
-                        videoItem.Snippet = snippet;
+                // Get the new index of the video
+                int newIndex = requestedPlaylistVideoNames.IndexOf(video.Snippet.Title);
 
-                        // Update video inside of the playlist
-                        var updateVideoPosRequest = youtubeService.PlaylistItems.Update(video, "snippet,contentDetails");
-                        var updateVideoPosResponse = await updateVideoPosRequest.ExecuteAsync();
+                // Build a new video item off of the video, and give it the necessary properties including the
+                // new position inside of the playlist
+                PlaylistItem videoItem = video;
+                PlaylistItemSnippet snippet = new PlaylistItemSnippet();
+                snippet.PlaylistId = requestedPlaylist.Id;
+                snippet.Position = newIndex;
+                ResourceId resourceId = new ResourceId();
+                resourceId.Kind = "youtube#video";
+                Console.WriteLine(resourceId.Kind);
+                resourceId.VideoId = videoItem.Snippet.ResourceId.VideoId;
+                snippet.ResourceId = resourceId;
+                videoItem.Snippet = snippet;
 
-                        // Update index to get next video name, and break so we can loop back through all of the videos we
-                        // are re-sorting
-                        i++;
-                        break;
-                    }
-                }
+                // Update video inside of the playlist
+                var updateVideoPosRequest = youtubeService.PlaylistItems.Update(video, "snippet,contentDetails");
+                await updateVideoPosRequest.ExecuteAsync();
             }
+
             Console.WriteLine("Sorting completed.");
         }
 
