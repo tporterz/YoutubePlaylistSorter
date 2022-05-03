@@ -32,11 +32,13 @@ namespace PlaylistSorter
                     Console.WriteLine("Error: " + e.Message);
                 }
             }
-
-            Console.WriteLine("Press any key to continue...");
-            Console.ReadKey();
+            Console.Read();
         }
 
+        /// <summary>
+        /// Runs the playlist sorter, which will first authenticate the user who is
+        /// wanting to sort their playlist, then call the method to do the sorting.
+        /// </summary>
         private async Task Run()
         {
             UserCredential credential;
@@ -96,12 +98,18 @@ namespace PlaylistSorter
             {
                 // Get the new index of the video
                 int newIndex = requestedPlaylistVideoNames.IndexOf(video.Snippet.Title);
+                if (newIndex == video.Snippet.Position)
+                {
+                    Console.WriteLine($"Video {video.Snippet.Title} was already in the correct sorted position.");
+                    continue;
+                }
 
                 // Build a new video item off of the video, and give it the necessary properties including the
                 // new position inside of the playlist
                 PlaylistItem videoItem = video;
                 PlaylistItemSnippet snippet = new PlaylistItemSnippet();
                 snippet.PlaylistId = requestedPlaylist.Id;
+                snippet.Title = videoItem.Snippet.Title;
                 snippet.Position = newIndex;
                 ResourceId resourceId = new ResourceId();
                 resourceId.Kind = "youtube#video";
@@ -113,12 +121,21 @@ namespace PlaylistSorter
                 var updateVideoPosRequest = youtubeService.PlaylistItems.Update(video, "snippet,contentDetails");
                 await updateVideoPosRequest.ExecuteAsync();
                 Console.WriteLine($"Video {video.Snippet.Title} was re-positioned to index {newIndex} in the playlist.");
+                break;
             }
 
             Console.WriteLine("Sorting completed.");
+            Console.WriteLine("Press ENTER to continue...");
+            Console.ReadKey();
         }
 
         // Helper methods
+
+        /// <summary>
+        /// Gets the requested playlist from user's list of playlists
+        /// </summary>
+        /// <param name="youtubeService"></param>
+        /// <returns>Playlist user requested, or null if it does not exist</returns>
         private static async Task<Playlist> GetUserRequestedPlaylistAsync(YouTubeService youtubeService)
         {
             // Get all user's playlists
