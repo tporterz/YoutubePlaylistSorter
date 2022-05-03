@@ -105,7 +105,6 @@ namespace PlaylistSorter
                 snippet.Position = newIndex;
                 ResourceId resourceId = new ResourceId();
                 resourceId.Kind = "youtube#video";
-                Console.WriteLine(resourceId.Kind);
                 resourceId.VideoId = videoItem.Snippet.ResourceId.VideoId;
                 snippet.ResourceId = resourceId;
                 videoItem.Snippet = snippet;
@@ -113,6 +112,7 @@ namespace PlaylistSorter
                 // Update video inside of the playlist
                 var updateVideoPosRequest = youtubeService.PlaylistItems.Update(video, "snippet,contentDetails");
                 await updateVideoPosRequest.ExecuteAsync();
+                Console.WriteLine($"Video {video.Snippet.Title} was re-positioned to index {newIndex} in the playlist.");
             }
 
             Console.WriteLine("Sorting completed.");
