@@ -1,2 +1,2 @@
-﻿using PlaylistSorter;
-PlaylistSorter.PlaylistSorter.Main(new string[] { "" });
+﻿using YoutubePlaylistSorter;
+PlaylistSorter.Main(new string[] { "" });

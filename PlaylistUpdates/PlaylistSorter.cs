@@ -11,7 +11,7 @@ using Google.Apis.Util.Store;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
 
-namespace PlaylistSorter
+namespace YoutubePlaylistSorter
 {
     public class PlaylistSorter
     {
@@ -121,7 +121,6 @@ namespace PlaylistSorter
                 var updateVideoPosRequest = youtubeService.PlaylistItems.Update(video, "snippet,contentDetails");
                 await updateVideoPosRequest.ExecuteAsync();
                 Console.WriteLine($"Video {video.Snippet.Title} was re-positioned to index {newIndex} in the playlist.");
-                break;
             }
 
             Console.WriteLine("Sorting completed.");
