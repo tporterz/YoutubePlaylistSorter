@@ -3,7 +3,6 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Upload;
@@ -84,43 +83,45 @@ namespace YoutubePlaylistSorter
             playlistItemsReq.MaxResults = 1000L;
             var requestedPlaylistResponse = await playlistItemsReq.ExecuteAsync();
 
-            List<string> requestedPlaylistVideoNames = new List<string>();
+            // Making a dictionary of video names and their video ids
+            Dictionary<string, string> requestedPlaylistVideos = new();
             foreach (var video in requestedPlaylistResponse.Items)
             {
-                requestedPlaylistVideoNames.Add(video.Snippet.Title);
+                requestedPlaylistVideos.Add(video.Snippet.Title, video.Snippet.ResourceId.VideoId);
             }
 
             // Sort video names (automatically alphabetical order)
+            List<string> requestedPlaylistVideoNames = requestedPlaylistVideos.Keys.ToList();
             requestedPlaylistVideoNames.Sort();
 
-            // For each video in the playlist
-            foreach (var video in requestedPlaylistResponse.Items)
+            // Reinsert into dictionary but in order
+            Dictionary<string, string> sortedPlaylistVideos = new();
+            foreach (string videoName in requestedPlaylistVideoNames)
             {
-                // Get the new index of the video
-                int newIndex = requestedPlaylistVideoNames.IndexOf(video.Snippet.Title);
-                if (newIndex == video.Snippet.Position)
-                {
-                    Console.WriteLine($"Video {video.Snippet.Title} was already in the correct sorted position.");
-                    continue;
-                }
+                sortedPlaylistVideos.Add(videoName, requestedPlaylistVideos[videoName]);
+            }
 
-                // Build a new video item off of the video, and give it the necessary properties including the
-                // new position inside of the playlist
-                PlaylistItem videoItem = video;
-                PlaylistItemSnippet snippet = new PlaylistItemSnippet();
-                snippet.PlaylistId = requestedPlaylist.Id;
-                snippet.Title = videoItem.Snippet.Title;
-                snippet.Position = newIndex;
-                ResourceId resourceId = new ResourceId();
-                resourceId.Kind = "youtube#video";
-                resourceId.VideoId = videoItem.Snippet.ResourceId.VideoId;
-                snippet.ResourceId = resourceId;
-                videoItem.Snippet = snippet;
+            // Create a new playlist to hold the sorted videos
+            var newPlaylist = new Playlist();
+            newPlaylist.Snippet = new PlaylistSnippet();
+            newPlaylist.Snippet.Title = $"{requestedPlaylist.Snippet.Title} [SORTED]";
+            newPlaylist.Snippet.Description = $"The sorted version of {requestedPlaylist.Snippet.Title}.";
+            newPlaylist.Status = new PlaylistStatus();
+            newPlaylist.Status.PrivacyStatus = "public";
+            newPlaylist = await youtubeService.Playlists.Insert(newPlaylist, "snippet,status").ExecuteAsync();
 
-                // Update video inside of the playlist
-                var updateVideoPosRequest = youtubeService.PlaylistItems.Update(video, "snippet,contentDetails");
-                await updateVideoPosRequest.ExecuteAsync();
-                Console.WriteLine($"Video {video.Snippet.Title} was re-positioned to index {newIndex} in the playlist.");
+            // Add all videos to new playlist
+            foreach (KeyValuePair<string, string> video in sortedPlaylistVideos)
+            {
+                var newPlaylistItem = new PlaylistItem();
+                newPlaylistItem.Snippet = new PlaylistItemSnippet();
+                newPlaylistItem.Snippet.PlaylistId = newPlaylist.Id;
+                newPlaylistItem.Snippet.ResourceId = new ResourceId();
+                newPlaylistItem.Snippet.ResourceId.Kind = "youtube#video";
+                newPlaylistItem.Snippet.ResourceId.VideoId = video.Value;
+                newPlaylistItem = await youtubeService.PlaylistItems.Insert(newPlaylistItem, "snippet").ExecuteAsync();
+
+                Console.WriteLine("Playlist item id {0} was added to playlist id {1}.", newPlaylistItem.Id, newPlaylist.Id);
             }
 
             Console.WriteLine("Sorting completed.");
